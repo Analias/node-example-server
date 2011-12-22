@@ -1,0 +1,181 @@
+<html>
+<head>
+    <style type="text/css">
+        .connected {
+            background-color: #040;
+            color: #FFF;
+        }
+        
+        .disconnected { 
+            background-color : #400;
+            color: #FFF;
+        }
+        
+        div.responses {
+            border: 1px solid black;
+            background-color: #CCC; 
+            font-weight: bold;
+            height: 80%; 
+            overflow: auto;
+            width: 100%; 
+        }
+        
+        div.responses div:nth-child(even) {
+            background-color: #FFD;
+        }
+        
+        div.responses .text {
+            color: #000; 
+            font-weight : normal; 
+        }
+        
+        div.responses .broadcast { 
+            background-color: #cef6ce;
+            color: #black;
+        }
+        
+        div.responses .error  {
+            background-color: #A00;
+            color: white;
+        }
+        
+        div.responses .reply {
+            background-color: #080;
+            color: white;
+        }
+        
+        div.responses .ping {
+            background-color: black;
+            color: white;
+        }
+        
+    </style>
+
+    <script lang="text/javascript" src="scripts/prototype.js"></script>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <script>
+    
+        document.observe("dom:loaded", function()
+        {
+            var socket = io.connect();
+
+            socket.on('connect', function()
+            {
+                $('connectionStatus').removeClassName('disconnected')
+                                     .addClassName('connected')
+                                     .update(' Connected ');
+            });
+            
+            socket.on('disconnect', function()
+            {
+                $('connectionStatus').removeClassName('connected')
+                                     .addClassName('disconnected')
+                                     .update(' Disconnected ');
+            });
+
+            socket.on('100', function(data)
+            {
+                showResponse(100, 'broadcast', Object.toJSON(data));
+            });
+            
+            socket.on('101', function(data)
+            {
+                showResponse(101, 'ping', Object.toJSON(data));
+            });
+
+            socket.on('200', function(data)
+            {
+                showResponse(200, 'reply', Object.toJSON(data));
+            });
+            
+            socket.on('500', function(data)
+            {
+                showResponse(500, 'error', Object.toJSON(data));
+            });
+            
+            $('getMessages').observe('click', function()
+            
+            {
+                socket.emit('GET MESSAGES');
+            });
+
+            $('putMessage').observe('click', function()
+            {
+                socket.emit('PUT MESSAGE', 'message: ' + new Date().getTime());
+            });
+
+            $('getStatus').observe('click', function()
+            {
+                socket.emit('GET STATUS');
+            });
+            
+            $('testBcast').observe('click', function()
+            {
+                socket.emit('TEST BCAST', { message : new Date().getTime() });
+            });
+
+            $('testError').observe('click', function()
+            {
+                socket.emit('TEST ERROR', { error : 500 });
+            });
+
+            $('connect').observe('click', function()
+            {
+                socket = io.connect();
+            });
+
+            $('disconnect').observe('click', function()
+            {
+                socket.disconnect();
+            });
+
+            $('clear').observe('click', function()
+            {
+                $('responses').update();
+            });
+            
+        });
+        
+        function showResponse(code, className, message)
+        {
+            var responses = $('responses');
+            var scrollToEnd = ((responses.scrollHeight > responses.clientHeight) 
+                                && ((responses.scrollHeight - responses.clientHeight) == responses.scrollTop));
+            
+            var x = responses.scrollTop;
+            
+            responses.insert('<div><span class="' + className + '"> ' + code + ' </span>: <span class="text">' + message + '</span></div>');
+            
+            $('rows').update($$('div.responses div').size());
+
+            if (scrollToEnd)
+            {
+                responses.scrollTop = responses.scrollHeight;
+            }
+        }
+        
+    </script>
+    
+    <title> Socket.IO Test Client </title>
+</head>
+
+<body>
+
+    <button type="button" id="getMessages"> Get Messages </button>
+    <button type="button" id="putMessage"> Put Message </button>
+    <button type="button" id="getStatus"> Get Status </button>
+    <button type="button" id="testBcast"> Test Broadcast </button>
+    <button type="button" id="testError"> Test Error </button>
+    <br/>
+    <button type="button" id="connect"> Connect </button>
+    <button type="button" id="disconnect"> Disconnect </button>
+    
+    <h1> Responses: (<span id="connectionStatus"> Disconnected </span>)</h1>
+    <div id="responses" class="responses" style=""></div>
+    
+    <button type="button" id="clear"> Clear </button> Rows: <span id="rows"></span> 
+    
+</body>
+</html>

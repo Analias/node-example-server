@@ -1,21 +1,21 @@
 <html>
 <head>
+    <meta name="description"  content="A Simple Node.JS Socket.IO Test Client">
+    <meta name="author"       content="Freeman P. Pascal IV (analias.nomdeguerre@gmail.com)">
+    <meta name="license-type" content="Creative Commons Attribution 2.0 Generic License">
+    <meta name="license-url"  content="http://creativecommons.org/licenses/by/2.0/">
+
     <style type="text/css">
-        .connected {
-            background-color: #040;
-            color: #FFF;
+
+        xbody {
+            height: 100%;
         }
-        
-        .disconnected { 
-            background-color : #400;
-            color: #FFF;
-        }
-        
+
         div.responses {
             border: 1px solid black;
             background-color: #CCC; 
             font-weight: bold;
-            height: 80%; 
+            height: 70%; 
             overflow: auto;
             width: 100%; 
         }
@@ -29,26 +29,46 @@
             font-weight : normal; 
         }
         
-        div.responses .broadcast { 
+        div.responses .broadcast, button.filter.broadcast { 
             background-color: #cef6ce;
             color: #black;
         }
         
-        div.responses .error  {
+        div.responses .error, button.filter.error  {
             background-color: #A00;
             color: white;
         }
         
-        div.responses .reply {
+        div.responses .reply, button.filter.reply {
             background-color: #080;
             color: white;
         }
         
-        div.responses .ping {
+        div.responses .ping, button.filter.ping {
             background-color: black;
             color: white;
         }
+
+        button.filter.filtered {
+            background-color : #CCC;
+            color : #AAA;
+        }
+
+        .connected {
+            background-color: #040;
+            color: #FFF;
+        }
         
+        .disconnected { 
+            background-color : #400;
+            color: #FFF;
+        }
+        
+        .license {
+            text-align: right;
+            width: 100%;
+        }
+
     </style>
 
     <script lang="text/javascript" src="scripts/prototype.js"></script>
@@ -57,17 +77,24 @@
     
     <script>
     
+        /* Wait until the document is fully loaded before trying to apply
+         * event handlers or or setting up the socket support.
+         */
         document.observe("dom:loaded", function()
         {
             var socket = io.connect();
 
+            /* Handle connection events to server.
+             */
             socket.on('connect', function()
             {
                 $('connectionStatus').removeClassName('disconnected')
                                      .addClassName('connected')
                                      .update(' Connected ');
             });
-            
+
+            /* Handle disconnection events from server.
+             */
             socket.on('disconnect', function()
             {
                 $('connectionStatus').removeClassName('connected')
@@ -75,81 +102,174 @@
                                      .update(' Disconnected ');
             });
 
+            /**
+             * Display broadcast (100) resposnes.
+             */
             socket.on('100', function(data)
             {
                 showResponse(100, 'broadcast', Object.toJSON(data));
             });
             
+            /**
+             * Display ping (101) responses.
+             */
             socket.on('101', function(data)
             {
                 showResponse(101, 'ping', Object.toJSON(data));
             });
 
+            /**
+             * Display positive (200) responses.
+             */
             socket.on('200', function(data)
             {
                 showResponse(200, 'reply', Object.toJSON(data));
             });
-            
+
+            /**
+             * Display error responses
+             */
             socket.on('500', function(data)
             {
                 showResponse(500, 'error', Object.toJSON(data));
             });
             
-            $('getMessages').observe('click', function()
+            /* UI Event handlers
+             */
             
+            /**
+             * GET MESSAGES - Get messages from server
+             */
+            $('getMessages').observe('click', function()
             {
                 socket.emit('GET MESSAGES');
             });
 
+            /**
+             * PUT MESSAGE - Send message to server.
+             */
             $('putMessage').observe('click', function()
             {
                 socket.emit('PUT MESSAGE', 'message: ' + new Date().getTime());
             });
 
+            /**
+             * GET STATUS - Get server status
+             */
             $('getStatus').observe('click', function()
             {
                 socket.emit('GET STATUS');
             });
             
+            /**
+             * TEST BCAST - Test broadcast messages.  Simply echos payload back.
+             */
             $('testBcast').observe('click', function()
             {
                 socket.emit('TEST BCAST', { message : new Date().getTime() });
             });
 
+            /**
+             * TEST ERROR - Test error messages.  Simply echos error code back.
+             */
             $('testError').observe('click', function()
             {
                 socket.emit('TEST ERROR', { error : 500 });
             });
 
+            /**
+             * Attempt to connect to server.
+             * FIXME - Not working at the moment
+             */
             $('connect').observe('click', function()
             {
                 socket = io.connect();
             });
 
+            /**
+             * Disconnect from server.
+             */
             $('disconnect').observe('click', function()
             {
                 socket.disconnect();
             });
 
+            /**
+             * Clear all responses.
+             */
             $('clear').observe('click', function()
             {
                 $('responses').update();
+                $('rows').update(0);
             });
             
+            /**
+             * Toggle filtering of all code 100 responses.
+             */
+            $('filter100').on("click", filter('filter100','.response100'));
+            
+            /**
+             * Toggle filtering of all code 101 responses.
+             */
+            $('filter101').on("click", filter('filter101','.response101'));
+            
+            /**
+             * Toggle filtering of all code 200 responses.
+             */
+            $('filter200').on("click", filter('filter200','.response200'));
+            
+            /**
+             * Toggle filtering of all code 500 responses.
+             */
+            $('filter500').on("click", filter('filter500','.response500'));
+            
         });
+
+        /**
+         * Return an event handler function that toggles filtering based on the state of the button.
+         * 
+         * @tparam HTMLbuttonElement/String button  
+         *          The filter button to bind the filter function to.
+         * @tparam String responseSelector
+         *          The CSS selector string to filter from the responses.
+         * 
+         * @treturn Function The event handling function that filters responses.
+         */
+        function filter(button, responseSelector)
+        {
+            return function(element)
+            {
+                $(button).toggleClassName('filtered');
+                $$(responseSelector).each(function(element)
+                { 
+                    element[$(button).hasClassName('filtered') ? 'hide' : 'show']();
+                });
+            }
+        }
         
+        /**
+         * Display response based on code and current filtering.
+         * 
+         * @tparam Number/String code The response code.
+         * @tparam String className The CSS class name to apply to the response.
+         * @tparam string message The response message, typically the response payload.
+         */
         function showResponse(code, className, message)
         {
             var responses = $('responses');
             var scrollToEnd = ((responses.scrollHeight > responses.clientHeight) 
                                 && ((responses.scrollHeight - responses.clientHeight) == responses.scrollTop));
             
-            var x = responses.scrollTop;
+            // Add new div tag to responses div structured to allow styling of code and message            
+            responses.insert('<div class="response' + code +'"><span class="' + className + '"> ' + code + ' </span>: <span class="text">' + message + '</span></div>');
             
-            responses.insert('<div><span class="' + className + '"> ' + code + ' </span>: <span class="text">' + message + '</span></div>');
-            
+            // Show/hide response based on state of filter button
+            responses.childElements().last()[$('filter'+code).hasClassName('filtered') ? 'hide' : 'show']();
+
+            // Update response count
             $('rows').update($$('div.responses div').size());
 
+            // If the scroll bar is at the bottom then keep there to show the latest responses.
             if (scrollToEnd)
             {
                 responses.scrollTop = responses.scrollHeight;
@@ -158,7 +278,7 @@
         
     </script>
     
-    <title> Socket.IO Test Client </title>
+    <title> A Simple Node.JS Socket.IO Test Client </title>
 </head>
 
 <body>
@@ -176,6 +296,20 @@
     <div id="responses" class="responses" style=""></div>
     
     <button type="button" id="clear"> Clear </button> Rows: <span id="rows"></span> 
+    
+    <br/>
+    
+    Filter: 
+    <button type="button" id="filter100" class="filter broadcast"> 100 </button>
+    <button type="button" id="filter101" class="filter ping"> 101 </button>
+    <button type="button" id="filter200" class="filter reply"> 200 </button>
+    <button type="button" id="filter500" class="filter error"> 500 </button>
+    
+    <div class="license">
+        <a rel="license" href="http://creativecommons.org/licenses/by/2.0/">
+            <img alt="Creative Commons License" style="border-width:0" src="http://i.creativecommons.org/l/by/2.0/88x31.png" />
+        </a>
+    </div>
     
 </body>
 </html>

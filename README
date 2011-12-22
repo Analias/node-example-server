@@ -1,0 +1,35 @@
+This is a sample project I am using to familarize myself primarly with Cloud9 IDE, 
+node.js, express, and socket.io. Although there are other packages thrown into
+the mix.
+
+The project consists of a node.js server and client page.  Once the server is started
+the user can access the server by browsing to http://localhost:1337/.  Once the page
+is loaded it will automatically connect to the server and start display responses.
+
+Several connections can be done by connecting to the server URL from multiple browser
+instances or computers.
+
+Use the buttons on the client page to interact with the server.  Each button exercises
+various protocol commands.  Some commands are just between the client and the server,
+while others will be broadcasted to all connected clients.
+
+There is enough support in the code to use it as the basis for a chat client or a 
+collaboration tool.
+
+This project has only been tested using Chrome.
+
+
+Setup
+-----
+
+Once the project is checked out of GitHub, you may need to install additional 
+packages if you don't already have them installed.
+
+    $ npm install -g express
+    $ npm install -g socket.io
+
+
+Things not working
+------------------
+
+  * The "connect" button doesn't seem to work after disconnecting.
